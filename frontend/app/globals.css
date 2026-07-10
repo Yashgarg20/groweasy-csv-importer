@@ -1,0 +1,87 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --font-display: "Space Grotesk", sans-serif;
+  --font-body: "Inter", sans-serif;
+  --font-mono: "IBM Plex Mono", monospace;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  background-color: theme("colors.ink.50");
+  color: theme("colors.ink.900");
+  font-family: var(--font-body);
+}
+
+.dark body {
+  background-color: theme("colors.ink.950");
+  color: theme("colors.ink.100");
+}
+
+/* Sticky-header ledger table look, shared by preview + results tables */
+.ledger-scroll {
+  overflow: auto;
+  border-radius: 0.75rem;
+}
+
+.ledger-scroll table {
+  border-collapse: separate;
+  border-spacing: 0;
+  width: 100%;
+  font-family: var(--font-mono);
+  font-size: 0.8125rem;
+}
+
+.ledger-scroll thead th {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  white-space: nowrap;
+  text-align: left;
+}
+
+.ledger-scroll th:first-child,
+.ledger-scroll td:first-child {
+  position: sticky;
+  left: 0;
+  z-index: 5;
+}
+
+.ledger-scroll thead th:first-child {
+  z-index: 15;
+}
+
+/* Respect reduced-motion preferences */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+@keyframes pulse-bar {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(400%);
+  }
+}
+
+.progress-indeterminate::after {
+  content: "";
+  display: block;
+  height: 100%;
+  width: 25%;
+  background: theme("colors.signal.500");
+  animation: pulse-bar 1.4s ease-in-out infinite;
+}
