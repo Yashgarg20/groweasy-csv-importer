@@ -1,3 +1,6 @@
+**Live app:** https://groweasy-csv-importer-xi-blush.vercel.app
+**Backend API:** https://groweasy-csv-importer-quxr.onrender.com
+**Position applied for:Intern
 # GrowEasy AI CSV Lead Importer
 
 Upload a CSV from *any* source — Facebook Lead Ads, Google Ads, Excel exports, another CRM, a marketing agency's spreadsheet, or a hand-built sheet — and have AI intelligently map it into the GrowEasy CRM lead format, regardless of column names or layout.
