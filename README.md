@@ -1,17 +1,21 @@
+# GrowEasy AI CSV Lead Importer
+
 **Live app:** https://groweasy-csv-importer-xi-blush.vercel.app
 **Backend API:** https://groweasy-csv-importer-quxr.onrender.com
-**Position applied for:Intern
-# GrowEasy AI CSV Lead Importer
+**Position applied for:** Intern
 
 Upload a CSV from *any* source — Facebook Lead Ads, Google Ads, Excel exports, another CRM, a marketing agency's spreadsheet, or a hand-built sheet — and have AI intelligently map it into the GrowEasy CRM lead format, regardless of column names or layout.
 
 ## How it works
 
-1. **Upload** — drag & drop or pick a CSV file. Nothing is sent to the server yet.
-2. **Preview** — the file is parsed entirely in the browser and shown in a scrollable, sticky-header table so you can sanity-check it before committing.
-3. **Confirm import** — only now does the file get uploaded to the backend.
-4. **AI mapping** — the backend chunks rows into batches and sends each batch to Claude (or any LLM you configure) with a detailed field-mapping prompt. Progress is polled and shown live.
-5. **Result** — a results screen shows every successfully mapped record plus every skipped row with the reason it was skipped (e.g. "no email or mobile number found").
+The UI is modeled as a lead-management dashboard ("Manage Your Leads"), with import happening in a modal rather than a separate page:
+
+1. **Import Leads via CSV** — click the button to open the import modal.
+2. **Select a file** — drag & drop or browse. A sample CSV template is available to download from the modal. Nothing is sent to the server yet.
+3. **Preview** — the file is parsed entirely in the browser and shown in a table so you can sanity-check it before committing. No AI processing happens at this stage.
+4. **Upload File** — only now does the file get uploaded to the backend for AI processing, with a live progress bar (real batch progress, not simulated).
+5. **Import summary** — the modal shows total imported / total skipped, plus the reason for every skipped row (e.g. "no email or mobile number found").
+6. **View leads** — closing the modal drops the newly imported leads straight into the main leads table, with a searchable list, colored status pills, and a **More** button per row that opens a detail panel showing every CRM field, including `crm_note` (where overflow emails/phone numbers and remarks live).
 
 ## Architecture
 
@@ -28,12 +32,14 @@ groweasy-csv-importer/
 │       ├── routes/import.routes.js
 │       └── server.js
 └── frontend/          Next.js (App Router) + TypeScript + Tailwind
-    ├── app/page.tsx                   4-step upload → preview → processing → result flow
-    ├── components/UploadZone.tsx      drag & drop + file picker
-    ├── components/PreviewTable.tsx    raw CSV preview (client-side parse only)
-    ├── components/ProgressPanel.tsx   live batch progress bar
-    ├── components/ResultsTable.tsx    imported / skipped tabs
-    └── lib/api.ts                     upload + polling client
+    ├── app/page.tsx                     "Manage Your Leads" dashboard shell + state
+    ├── components/Sidebar.tsx           GrowEasy-style nav shell
+    ├── components/ImportModal.tsx       modal: select → preview → processing → summary
+    ├── components/LeadsTable.tsx        searchable leads table with status pills
+    ├── components/LeadDetailModal.tsx   "More" button — full record incl. crm_note
+    ├── components/StatusPill.tsx        crm_status → colored pill + label
+    ├── components/ThemeToggle.tsx       dark mode toggle
+    └── lib/api.ts                       upload + polling client
 ```
 
 **Why an async job + polling instead of one long request?** AI extraction over many batches can take a while. The backend returns a `jobId` immediately, processes batches in the background, and the frontend polls `/api/import/:jobId/status` every ~1.2s — this is what powers the real (not fake) progress bar, and avoids a single request timing out on large files.
@@ -72,7 +78,7 @@ docker compose up --build
 
 ## Using a different LLM provider
 
-The AI call is isolated in `backend/src/services/ai.service.js` (`callModelOnce`). This project defaults to **Google Gemini** (`gemini-2.5-flash`), which has a genuinely free tier — no credit card needed, just a Google account. To swap it for Claude or OpenAI instead, replace the body of that function with the equivalent SDK call — the batching, retry, JSON-extraction, and row-reconciliation logic around it doesn't need to change, since it's provider-agnostic (it just expects a `{ results: [...] }` JSON payload back).
+The AI call is isolated in `backend/src/services/ai.service.js` (`callModelOnce`). This project defaults to **Google Gemini** (`gemini-3.5-flash`), which has a genuinely free tier — no credit card needed, just a Google account. Google retires Gemini model IDs on a rolling basis (often faster than their published shutdown dates), so if you hit a `404 ... no longer available` error, check [ai.google.dev/gemini-api/docs/models](https://ai.google.dev/gemini-api/docs/models) for the current model name and update `GEMINI_MODEL` in `.env`. To swap Gemini for Claude or OpenAI instead, replace the body of `callModelOnce` with the equivalent SDK call — the batching, retry, JSON-extraction, and row-reconciliation logic around it doesn't need to change, since it's provider-agnostic (it just expects a `{ results: [...] }` JSON payload back).
 
 ## AI mapping rules (encoded in `services/prompt.js`)
 
@@ -94,7 +100,7 @@ The AI call is isolated in `backend/src/services/ai.service.js` (`callModelOnce`
 | Variable | Where | Default | Purpose |
 |---|---|---|---|
 | `GEMINI_API_KEY` | backend `.env` | — (required) | Google AI Studio API key (free tier) |
-| `GEMINI_MODEL` | backend `.env` | `gemini-2.5-flash` | Model used for extraction |
+| `GEMINI_MODEL` | backend `.env` | `gemini-3.5-flash` | Model used for extraction — check [current model list](https://ai.google.dev/gemini-api/docs/models) if it 404s |
 | `AI_BATCH_SIZE` | backend `.env` | `15` | Rows sent to the AI per request |
 | `AI_MAX_RETRIES` | backend `.env` | `3` | Retry attempts per failed batch |
 | `NEXT_PUBLIC_API_BASE_URL` | frontend `.env.local` | `http://localhost:4000` | Backend URL the UI calls |
@@ -103,3 +109,4 @@ The AI call is isolated in `backend/src/services/ai.service.js` (`callModelOnce`
 
 - No database is used — the app is stateless per the assignment's "optional" note; job progress lives in memory for the life of the process, which is sufficient for a single-instance demo/evaluation deployment.
 - Dark mode preference is stored in the browser's `localStorage` (this is a normal deployed web app running in the user's own browser, not a sandboxed preview, so `localStorage` is appropriate here).
+- The sidebar mirrors GrowEasy's actual product navigation for visual context, but only **Manage Leads** (the CSV import + leads list) is implemented, since that's the only feature this assignment asked for. Every other nav item (Dashboard, Generate Leads, Lead Sources, etc.) is shown with a "Soon" badge and is intentionally non-interactive rather than a broken link.
